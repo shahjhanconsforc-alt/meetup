@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>meetup-bot</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- Generated from data/img.png. Not img.png itself: that is 1254x1254/900KB
+       with the checkerboard painted into the pixels, so it would download a
+       megabyte to draw 16 pixels and render on a grey grid. -->
+  <link rel="icon" href="/data/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/data/favicon-32.png">
+  <link rel="apple-touch-icon" href="/data/favicon-180.png">
+</head>
+<body>
+
+<!-- Icon set, defined once and referenced with <use>. Inline sprite rather than
+     an icon font or a CDN: the page must stay self-contained, and repeating a
+     dozen path definitions per button is what makes markup unreadable. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>
+    <g id="i-scan"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></g>
+    <g id="i-db"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></g>
+    <g id="i-megaphone"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></g>
+    <g id="i-gear"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></g>
+    <g id="i-mail"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></g>
+    <g id="i-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></g>
+    <g id="i-plus"><path d="M5 12h14M12 5v14"/></g>
+    <g id="i-save"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></g>
+    <g id="i-eye"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></g>
+    <g id="i-flask"><path d="M9 3h6M10 3v6l-5 10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1l-5-10V3"/></g>
+    <g id="i-send"><path d="m22 2-7 20-4-9-9-4 20-7z"/></g>
+    <g id="i-trash"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></g>
+    <g id="i-search"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></g>
+    <g id="i-play"><path d="m5 3 14 9-14 9V3z"/></g>
+    <g id="i-check"><path d="M20 6 9 17l-5-5"/></g>
+    <g id="i-login"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></g>
+    <g id="i-logout"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></g>
+    <g id="i-external"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/></g>
+    <g id="i-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></g>
+    <g id="i-sparkles"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></g>
+    <g id="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></g>
+    <g id="i-stop"><rect x="5" y="5" width="14" height="14" rx="2"/></g>
+    <g id="i-reset"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></g>
+    <g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+    <g id="i-x"><path d="M18 6 6 18M6 6l12 12"/></g>
+    <g id="i-image"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></g>
+    <g id="i-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></g>
+    <g id="i-list"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></g>
+    <g id="i-panel"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M14 3v18"/></g>
+    <g id="i-calendar"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></g>
+    <g id="i-trophy"><path d="M6 4h12v5a6 6 0 0 1-12 0V4z"/><path d="M6 6H4a2 2 0 0 0 0 4h2M18 6h2a2 2 0 0 1 0 4h-2M9 20h6M12 15v5"/></g>
+    <g id="i-clock"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g>
+    <g id="i-minus"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></g>
+    <g id="i-chat"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V8a4 4 0 0 1 4-4h6a8 8 0 0 1 8 8z"/></g>
+    <g id="i-dots"><circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></g>
+    <g id="i-left"><path d="m15 18-6-6 6-6"/></g>
+    <g id="i-right"><path d="m9 18 6-6-6-6"/></g>
+  </defs>
+</svg>
+
+<header class="bar">
+  <!-- alt is empty on purpose: the wordmark beside it already says the name, and
+       a described logo would make a screen reader announce it twice. -->
+  <!-- The wordmark is ONE element. Bare text in a flex container becomes its own
+       anonymous flex item, so without this wrapper the h1's gap (there for the
+       logo) also opens up between "meetup" and "-bot". -->
+  <h1><img class="logo" src="/data/logo.png" alt="" width="28" height="28"><span
+      class="wordmark">meetup<span class="accent">-bot</span></span></h1>
+
+  <!-- Campaign first: it is the job everything else feeds. The others are what
+       you set up once, this is what you come back to. -->
+  <nav class="tabs" id="tabs">
+    <button data-panel="campaign" class="on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-megaphone"/></svg>Campaign</button>
+    <button data-panel="accounts"><svg class="ic" viewBox="0 0 24 24"><use href="#i-user"/></svg>Accounts</button>
+    <button data-panel="scraping"><svg class="ic" viewBox="0 0 24 24"><use href="#i-scan"/></svg>Scraping</button>
+    <button data-panel="data"><svg class="ic" viewBox="0 0 24 24"><use href="#i-db"/></svg>Data</button>
+    <button data-panel="settings"><svg class="ic" viewBox="0 0 24 24"><use href="#i-gear"/></svg>Settings</button>
+  </nav>
+
+  <div class="pills">
+    <button class="pill" id="pill-minio" title="MinIO status — click to see its log">
+      <i class="dot"></i><span>minio …</span></button>
+    <span class="pill" id="pill-browser"><i class="dot"></i><span>browser …</span></span>
+    <span class="pill run" id="pill-run">idle</span>
+    <button class="icon-btn" id="feed-toggle" aria-pressed="true"
+            title="Show or hide the activity feed">
+      <svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Accounts ─────────────────────────────────────────────── -->
+  <section class="panel" data-panel="accounts">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-user"/></svg></span>
+        <h2>Accounts</h2>
+        <div class="grow"></div>
+        <span class="muted" id="sessions-count"></span>
+        <button id="acc-check"><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg>Check login status</button>
+      </div>
+      <form id="acc-add" class="inline">
+        <input name="label" placeholder="Label (optional)">
+        <input name="login" placeholder="Email or username" required>
+        <input name="password" type="password" placeholder="Password" required>
+        <button type="submit"><svg class="ic" viewBox="0 0 24 24"><use href="#i-plus"/></svg>Add</button>
+      </form>
+
+      <div id="account-cards" class="acct-grid"></div>
+    </div>
+  </section>
+
+  <!-- ── Scraping ─────────────────────────────────────────────── -->
+  <section class="panel" data-panel="scraping">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-scan"/></svg></span>
+        <h2>Scraping</h2>
+        <div class="grow"></div>
+        <!-- THE scrape, at the top of the panel it belongs to. It drives the
+             live browser window, so there is nothing for it to do until an
+             account is open — the gate below turns it on. Start over sits with
+             it because they are the two ends of the same thing: begin a run, or
+             throw it away and begin again. -->
+        <button id="pipe-auto" class="primary" disabled
+                title="All events → its first event → its second → on down the tab, until you stop it. Stop it from the run box below.">
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>
+          Scrape all events</button>
+        <button id="pipe-reset" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Start over</button>
+      </div>
+
+      <!-- The gate. With no browser open, Find loads logged out and a scrape
+           walks pages that show nothing — so the panel asks for the account
+           first instead of letting the buttons fail. Exactly one of these two
+           boxes is on screen: the ask, or the account it will run as. -->
+      <!-- Not hidden to start with: locked IS the state before the sessions read
+           comes back, and starting empty would show a dead Scrape button with no
+           word about why. The read hides it if a window is already open. -->
+      <div class="gate" id="scrape-gate">
+        <span class="gate-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-login"/></svg></span>
+        <div class="gate-text">
+          <strong>Open an account first</strong>
+          <span>Scraping runs in the live browser window. Go to <b>Accounts</b>
+            and press the open icon
+            <svg class="ic gate-hint-ic" viewBox="0 0 24 24"><use href="#i-external"/></svg>
+            on the account you want to scrape with — <b>Scrape all events</b>
+            switches on as soon as that window is up.</span>
+        </div>
+        <div class="grow"></div>
+        <button id="scrape-open-accounts" class="primary">
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-user"/></svg>Go to Accounts</button>
+      </div>
+
+      <div class="active-strip" id="scrape-ready" hidden></div>
+
+      <div class="run" id="run-box" hidden>
+        <div class="run-head">
+          <strong id="run-title">run</strong>
+          <span id="run-detail" class="muted"></span>
+          <div class="grow"></div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="run-bar"></div></div>
+      </div>
+
+    </div>
+
+    <!-- ── The pipeline ──────────────────────────────────────────
+         Category → one event → its members. It ENDS at the roster: the
+         Write-and-send box that used to sit under the table is gone, and
+         messaging is the Campaign panel's job. Each step is unlocked by the one
+         above it, because the order is real — there is no event to pick before
+         a category is open. -->
+    <div class="card" id="pipeline">
+      <div class="card-head">
+        <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-send"/></svg></span>
+        <h2>Event → members</h2>
+        <div class="grow"></div>
+        <span class="muted" id="pipe-state"></span>
+      </div>
+
+      <!-- One press, not a tour of the taxonomy: which category is not a
+           decision worth making by hand. So the pool is behind ONE button —
+           twenty tabs laid out permanently is a wall the operator reads past
+           every time to reach the table under it. -->
+      <div class="pipe-controls">
+        <button id="pipe-pool-toggle" class="tiny" aria-expanded="false"
+                title="The categories a roll draws from">
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
+          Categories<span class="pool-n" id="pipe-pool-count">0</span></button>
+        <!-- One line. It used to spell the sweep out in three, which cost a
+             permanent second row on this strip for a sentence that is read once
+             — the rest of it is on the button's own tooltip, up in the head
+             where the button now is. -->
+        <span class="muted" id="pipe-auto-note">Works down <b>All events</b> —
+          one event, its members, then the next.</span>
+        <div class="grow"></div>
+        <!-- Reading the list IS opening the profiles: the cards are opened a
+             tab-full at a time as the list is walked, each read for the id its
+             card does not carry and closed again. There is no separate collect
+             step to press a button after. -->
+        <button id="pipe-members" class="tiny" disabled
+                title="Walk this event's attendee list again, opening each profile for its id">
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Re-read members</button>
+      </div>
+
+      <!-- The saved strip, opened by the button above. Read off /find/ ONCE and
+           kept, so a roll is a click on a tab rather than a page load to
+           rediscover which tabs exist — and so the operator can see the whole
+           pool being rolled from. The rolled one lights up; the rest are just
+           the pool. -->
+      <div class="cat-pool" id="pipe-pool-wrap" hidden>
+        <span class="pool-k">Categories</span>
+        <!-- Clicking one SWEEPS it: every event on that tab, one after another,
+             until you stop it. They used to be labels — the pool a random roll
+             drew from — which meant the twenty tabs were on screen and none of
+             them could be chosen. -->
+        <span class="muted" id="pipe-pool-note">none saved yet</span>
+        <div class="grow"></div>
+        <button id="pipe-pool-save" class="tiny" disabled
+                title="Read the category strip off the Find page and save it">
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-download"/></svg>Save categories</button>
+        <div class="pool-list" id="pipe-pool"></div>
+      </div>
+
+      <!-- Category, event, members and the roster as ONE board. They are four
+           views of a single answer — which category, which event, how many
+           people, and who — so the counts and the list they describe share a
+           frame rather than floating as separate cards with a gap between the
+           number and the rows it counts.
+
+           A table, not chips: three things have to be readable per member — who
+           they are, the message they get, and where that message has got to —
+           and only a column each keeps them readable down a list of a hundred.
+           The status column is the run's own, polled while it works. -->
+      <div class="pipe-board">
+        <div class="summary">
+          <div class="sum-block">
+            <span class="sum-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-calendar"/></svg></span>
+            <div class="sum-text">
+              <span class="sum-k">Event</span>
+              <strong class="sum-v" id="sum-event">—</strong>
+              <span class="sum-sub" id="sum-when">none picked yet</span>
+            </div>
+          </div>
+          <div class="sum-block">
+            <span class="sum-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></span>
+            <div class="sum-text">
+              <span class="sum-k">Category</span>
+              <strong class="sum-v" id="sum-category">—</strong>
+              <span class="sum-sub" id="sum-category-sub">none picked yet</span>
+            </div>
+          </div>
+          <div class="sum-block total">
+            <div class="sum-text">
+              <span class="sum-k">Total members</span>
+              <strong class="sum-n" id="sum-total">0</strong>
+              <span class="sum-sub" id="sum-total-sub">none collected yet</span>
+            </div>
+            <span class="sum-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-users"/></svg></span>
+          </div>
+        </div>
+
+        <div id="pipe-mem-wrap" class="mem-table-wrap">
+          <table id="pipe-mem-table" class="mem-table">
+            <!-- Who was scraped, and nothing else. The tick, SMS and Status
+                 columns went with the Write-and-send box below the table: the
+                 ticks only ever built its recipient list, and the other two
+                 were its output. Messaging is the Campaign panel's job. -->
+            <thead><tr>
+              <th class="c-n">#</th>
+              <th><svg class="ic th-ic" viewBox="0 0 24 24"><use href="#i-user"/></svg>Member</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- One event brings back hundreds and every one of them is on screen:
+             the list scrolls inside the board rather than paging, so the roster
+             is one continuous thing to run an eye down. The header row stays put
+             while it scrolls. -->
+        <div class="board-foot">
+          <span class="pager-info" id="pipe-list-info"></span>
+          <div class="grow"></div>
+        </div>
+      </div>
+
+      <!-- Every event this run has FINISHED, newest first. An event that took
+           two minutes to walk and then vanished from the screen the moment the
+           next one started was work the operator could not see happening — and
+           with several accounts sweeping at once, which of them did what is
+           only answerable here. -->
+      <div class="done-events" id="pipe-done" hidden>
+        <div class="batch-head">
+          <span class="pool-k">Scraped events</span>
+          <span class="muted" id="pipe-done-count"></span>
+        </div>
+        <div class="done-list" id="pipe-done-list"></div>
+      </div>
+
+      <!-- What can be done with the roster. The "batches of five" list that
+           used to sit here is gone: batching is what a CAMPAIGN does to shape
+           its sending (Campaign → Settings), and cutting a scraped roster into
+           fives was a second, unrelated meaning of the same word on the same
+           screen. These two were never about batching. -->
+      <div class="batches" id="pipe-roster-tools" hidden>
+        <div class="batch-head">
+          <span class="pool-k">Roster</span>
+          <div class="grow"></div>
+          <!-- Opens every member's profile a tab-full at a time, clicking
+               anyone whose card carried no id on the list first — that click is
+               the only way their id exists. Reports in the run box, and stops
+               from there. -->
+          <button id="pipe-open-all" class="tiny primary"
+                  title="Open every member's profile, a tab-full at a time">
+            <svg class="ic" viewBox="0 0 24 24"><use href="#i-external"/></svg>Open all profiles</button>
+          <button id="pipe-batch-close" class="tiny"
+                  title="Close the profile tabs, keeping the event screen">
+            <svg class="ic" viewBox="0 0 24 24"><use href="#i-x"/></svg>Close tabs</button>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ── Data ─────────────────────────────────────────────────── -->
+  <section class="panel" data-panel="data">
+
+    <!-- One file per event, straight out of MinIO: its members' names and
+         ids. The members table below says who has ever been seen; this says
+         who was on a given event, which is the unit the operator works in. -->
+    <div class="card overview">
+      <div class="ov-head">
+        <span class="ov-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-db"/></svg></span>
+        <div class="ov-title">
+          <h2>Data Overview</h2>
+          <span class="ov-sub">Summary of events and associated usernames</span>
+        </div>
+        <div class="grow"></div>
+        <div class="ov-counts">
+          <span class="muted" id="roster-count"></span>
+          <span class="ov-total" id="roster-users-count"></span>
+        </div>
+        <button id="roster-reload" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Reload</button>
+      </div>
+
+      <!-- Event, how many, and who — the names and ids in the row itself, so
+           the answer to "who was on that one" needs no second click. Ten per
+           row; the rest are behind see more, because a roster of eighty would
+           otherwise be the whole panel.
+
+           Each row carries its own hue, on the tile, the count and the name
+           pills alike: with three columns saying different things about the
+           same event, one colour per row is what ties them together down a
+           long table. -->
+      <!-- The list scrolls inside this, not down the page: the panel's head —
+           how many events, and Reload — is what the operator reads the rows
+           against, and scrolling the whole screen took it away at the first
+           turn of the wheel. -->
+      <div id="roster-wrap" class="roster-wrap">
+        <table class="roster-table" id="roster-table">
+          <thead><tr>
+            <th class="c-event">
+              <svg class="ic th-ic" viewBox="0 0 24 24"><use href="#i-calendar"/></svg>Event</th>
+            <th class="c-count">
+              <svg class="ic th-ic" viewBox="0 0 24 24"><use href="#i-users"/></svg>Total users</th>
+            <th>
+              <svg class="ic th-ic" viewBox="0 0 24 24"><use href="#i-user"/></svg>Usernames</th>
+            <th class="c-do"></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── Campaign ─────────────────────────────────────────────── -->
+  <!-- A wizard, not five loose cards: the steps have a real order (you cannot
+       pick recipients before choosing an account, or send before writing a
+       draft), and a numbered rail down the left is what makes that order
+       visible instead of something the operator has to already know. -->
+  <section class="panel on" data-panel="campaign">
+    <div class="wizard">
+
+      <nav class="steps" id="camp-steps">
+        <button data-step="login" class="on">
+          <span class="num">1</span>
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-login"/></svg>
+          <span class="label">Accounts</span><i class="tick"></i></button>
+        <button data-step="users">
+          <span class="num">2</span>
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-users"/></svg>
+          <span class="label">Recipients</span><i class="tick"></i></button>
+        <button data-step="messages">
+          <span class="num">3</span>
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-mail"/></svg>
+          <span class="label">Messages</span><i class="tick"></i></button>
+        <button data-step="media">
+          <span class="num">4</span>
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-image"/></svg>
+          <span class="label">Media</span><i class="tick"></i></button>
+        <button data-step="status">
+          <span class="num">5</span>
+          <svg class="ic" viewBox="0 0 24 24"><use href="#i-list"/></svg>
+          <span class="label">Status</span><i class="tick"></i></button>
+      </nav>
+
+      <div class="step-body">
+
+        <!-- 1 · Accounts -->
+        <div class="step on" data-step="login">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-login"/></svg></span>
+              <h2>Accounts</h2>
+              <div class="grow"></div>
+              <button id="camp-check"><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg>Check session</button>
+              <button id="camp-login" class="primary"><svg class="ic" viewBox="0 0 24 24"><use href="#i-login"/></svg>Log in</button>
+            </div>
+            <!-- The accounts themselves, on the face of the step. A dropdown
+                 hid the one thing this step is about — which account, and what
+                 state its session is in — behind a click, and the answer to
+                 "which of these can I log in with" was one option at a time. -->
+            <div class="acct-row" id="camp-accounts"></div>
+            <!-- Several can be picked: the campaign then runs from all of them
+                 at once, the recipients dealt between them. This line says how
+                 that split falls, before the run rather than after.
+                 The cog sits at the head of it — the knobs that shape the send
+                 belong beside the line describing the send, and an icon with no
+                 label keeps it out of the way until it is wanted. -->
+            <div class="acct-note">
+              <button id="camp-cog" class="icon-btn tiny" title="Campaign settings"
+                      aria-label="Campaign settings">
+                <svg class="ic" viewBox="0 0 24 24"><use href="#i-gear"/></svg></button>
+              <span class="muted" id="camp-accounts-note"></span>
+            </div>
+            <div id="camp-active" class="active-strip" hidden></div>
+            <div id="camp-login-info" class="upload-info" hidden></div>
+            <div id="camp-session" class="session-card"></div>
+          </div>
+        </div>
+
+        <!-- 2 · Recipients -->
+        <div class="step" data-step="users">
+          <!-- Two ways in, one at a time: a file you brought, or what the
+               scraper has already collected. Both fill the same slot — the
+               recipient list — so showing them side by side asked the operator
+               to work out which of the two on screen was the live one. -->
+          <div class="card" id="users-upload-card">
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg></span>
+              <h2>Upload recipients</h2>
+              <div class="grow"></div>
+              <button id="users-import" hidden><svg class="ic" viewBox="0 0 24 24"><use href="#i-save"/></svg>Save to member store</button>
+              <button id="users-database"><svg class="ic" viewBox="0 0 24 24"><use href="#i-db"/></svg>Database</button>
+            </div>
+
+            <label class="dropzone" id="users-drop" for="users-file">
+              <svg class="ic big" viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+              <strong>Drop a file here, or click to choose</strong>
+              <span class="muted">csv · tsv · txt · xlsx</span>
+              <input type="file" id="users-file" accept=".csv,.tsv,.tab,.txt,.list,.xlsx,.xlsm" hidden>
+            </label>
+            <div id="users-upload-info" class="upload-info" hidden></div>
+            <div id="users-upload-preview" class="preview-table" hidden></div>
+          </div>
+
+          <!-- Everyone the scraper has ever collected, read straight out of the
+               member store in MinIO. The panel used to offer these only as a
+               filtered "preview" — a count and sixty chips — which is an answer
+               to "how many match", not to "who have we got". This is the list
+               itself: searchable, tickable, and the source a run sends to. -->
+          <div class="card" id="users-store-card" hidden>
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-db"/></svg></span>
+              <h2>Scraped users</h2>
+              <span class="src-tag" title="Read from the MinIO member store">MinIO · members</span>
+              <div class="grow"></div>
+              <span class="muted" id="store-count"></span>
+              <!-- For a store filled before names were kept on the way in. The
+                   event rosters held them all along, so this reads those and
+                   fills in the rows that show a bare id. -->
+              <button id="store-names" class="tiny"
+                      title="Fill in missing names from the stored event rosters">
+                <svg class="ic" viewBox="0 0 24 24"><use href="#i-user"/></svg>Get names</button>
+              <button id="store-reload" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Reload</button>
+              <button id="users-upload-back" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg>Upload a file</button>
+            </div>
+            <!-- Search and range on one line: they are read left to right as
+                 one sentence — narrow the list, then take rows off it.
+                 Ticking 200 of 291 by hand is not a thing anybody does, so
+                 there are no ticks; the range IS the selection. OK loads those
+                 rows into the list below, and that list is what a run sends
+                 to — what is on screen is who gets messaged. -->
+            <div class="row wrap store-range">
+              <label class="grow">Search
+                <input type="search" id="store-search" placeholder="handle, name, group or city">
+              </label>
+              <!-- The categories these members were scraped under. Picking one
+                   narrows the list to everyone under it, and what is on screen
+                   IS who a run sends to — so this is how a campaign is aimed at
+                   one category's people. -->
+              <label class="store-cat">Category
+                <select id="store-cat"></select>
+              </label>
+              <label><input type="checkbox" id="store-hide-used"> Hide already-contacted</label>
+              <span class="rng-label">Rows</span>
+              <input type="number" id="store-from" min="1" placeholder="from" title="First row, counting what is on screen">
+              <span class="rng-dash">–</span>
+              <input type="number" id="store-to" min="1" placeholder="to" title="Last row, inclusive">
+              <button id="store-range" class="primary"><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg>OK</button>
+              <button id="store-clear" class="tiny">Show all</button>
+            </div>
+            <div id="store-wrap" class="store-wrap">
+              <table class="store-table" id="store-table">
+                <thead><tr>
+                  <th class="c-n">#</th>
+                  <th>Member</th>
+                  <th class="c-cats">Category</th>
+                  <th class="c-groups">Groups</th>
+                  <th class="c-used">Messaged</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 3 · Messages -->
+        <div class="step" data-step="messages">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-mail"/></svg></span>
+              <h2>Drafts</h2>
+              <span class="src-tag" title="Read from and saved to the MinIO messages bucket">MinIO · messages</span>
+              <!-- Either this step or Media may be skipped, never both: a send
+                   carrying no text and no picture is an empty message. Skipping
+                   one disables the other's switch. -->
+              <label class="skip" title="Send pictures only, with no text">
+                <input type="checkbox" id="skip-messages"> Skip
+              </label>
+              <div class="grow"></div>
+              <span class="muted" id="draft-count"></span>
+              <!-- What is already in the bucket stays folded away until it is
+                   asked for: opening this step to write a message should not
+                   mean reading six you wrote last month first. -->
+              <button id="draft-toggle" aria-expanded="false" aria-controls="drafts">
+                <svg class="ic" viewBox="0 0 24 24"><use href="#i-list"/></svg>Stored drafts</button>
+              <button id="draft-add"><svg class="ic" viewBox="0 0 24 24"><use href="#i-plus"/></svg>Add draft</button>
+              <button id="draft-save" class="primary"><svg class="ic" viewBox="0 0 24 24"><use href="#i-save"/></svg>Save drafts</button>
+            </div>
+            <!-- The upload is an icon in the corner of the text box now, not a
+                 card of its own: importing a file is a thing you do once, and
+                 it was taking more room than the editor it feeds. The box
+                 itself is still the drop target. -->
+            <input type="file" id="msg-file" accept=".txt,.csv,.tsv,.tab,.xlsx,.xlsm" hidden>
+            <div id="drafts"></div>
+            <div id="msg-upload-info" class="upload-info" hidden></div>
+          </div>
+
+        </div>
+
+        <!-- 4 · Media -->
+        <!-- Two ways in, one at a time, like step 2: images you bring, or the
+             ones already in the bucket. The library is behind a button because
+             opening this step to attach a new picture should not mean loading
+             every one you have ever uploaded first. -->
+        <div class="step" data-step="media">
+          <div class="card" id="media-upload-card">
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg></span>
+              <h2>Upload media</h2>
+              <label class="skip" title="Send text only, with no picture">
+                <input type="checkbox" id="skip-media"> Skip
+              </label>
+              <div class="grow"></div>
+              <button id="media-library"><svg class="ic" viewBox="0 0 24 24"><use href="#i-db"/></svg>Library</button>
+            </div>
+            <label class="dropzone" id="media-drop" for="media-file">
+              <svg class="ic big" viewBox="0 0 24 24"><use href="#i-image"/></svg>
+              <strong>Drop images here, or click to choose</strong>
+              <span class="muted">png · jpg · gif · webp</span>
+              <input type="file" id="media-file" accept="image/*" multiple hidden>
+            </label>
+            <div id="media-upload-info" class="upload-info" hidden></div>
+          </div>
+
+          <div class="card" id="media-library-card" hidden>
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-image"/></svg></span>
+              <h2>Library</h2>
+              <span class="src-tag" title="Read from the MinIO media bucket">MinIO · media</span>
+              <div class="grow"></div>
+              <span class="muted" id="media-count"></span>
+              <button id="media-reload" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Reload</button>
+              <button id="media-upload-back" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg>Upload</button>
+            </div>
+            <div id="media-grid" class="media-grid"></div>
+          </div>
+        </div>
+
+        <!-- 5 · Status -->
+        <div class="step" data-step="status">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-list"/></svg></span>
+              <h2>Status</h2>
+              <div class="grow"></div>
+              <button id="camp-refresh"><svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Re-check</button>
+            </div>
+            <ul class="checklist" id="camp-checklist"></ul>
+            <!-- One button. It is off until every mandatory line above is
+                 ticked, and the line beside it names what is still missing —
+                 a disabled button that does not say why is a dead end. -->
+            <div class="row">
+              <button id="camp-start" class="danger" disabled>
+                <svg class="ic" viewBox="0 0 24 24"><use href="#i-send"/></svg>Start campaign</button>
+              <!-- Opens itself on Start. Here as well, because a panel that can
+                   only be reached by starting a campaign is one you cannot get
+                   back to after closing it mid-run. -->
+              <button id="camp-live">
+                <svg class="ic" viewBox="0 0 24 24"><use href="#i-list"/></svg>Campaign live</button>
+              <span class="hint" id="camp-start-note"></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Settings ─────────────────────────────────────────────── -->
+  <section class="panel" data-panel="settings">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-gear"/></svg></span>
+        <h2>Settings</h2>
+        <div class="grow"></div>
+        <button id="set-reset"><svg class="ic" viewBox="0 0 24 24"><use href="#i-reset"/></svg>Reset to defaults</button>
+        <button id="set-save" class="primary"><svg class="ic" viewBox="0 0 24 24"><use href="#i-save"/></svg>Save</button>
+      </div>
+      <!-- Its own button rather than a checkbox down the list, because it is
+           the one setting that decides whether this app talks to anybody. It
+           saves on the press — a switch you have to remember to Save is a
+           switch that is sometimes lying about what the next run will do. -->
+      <div class="set-toggle">
+        <span class="st-text">
+          <span class="st-name">Click Send</span>
+          <span class="st-help">On, a run sends. Off, it types the message,
+            attaches the image and leaves the composer for you to press Send.</span>
+        </span>
+        <div class="grow"></div>
+        <button id="set-clicksend" class="toggle" aria-pressed="true">
+          <span class="dot"></span><span class="lbl">On</span></button>
+      </div>
+      <div id="settings-form" class="settings"></div>
+    </div>
+  </section>
+
+</main>
+
+<aside class="feed">
+  <div class="feed-head">
+    <strong>Activity</strong>
+    <div class="grow"></div>
+    <button id="feed-clear" class="tiny"><svg class="ic" viewBox="0 0 24 24"><use href="#i-trash"/></svg>Clear</button>
+    <button id="feed-close" class="icon-btn tiny" title="Hide the activity feed">
+      <svg class="ic" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+  </div>
+  <ul id="feed"></ul>
+</aside>
+
+<!-- ── Campaign settings ──────────────────────────────────────────
+     The send's own knobs, reachable from the campaign screen instead of a
+     round trip to the Settings panel. The SAME stored values — this writes
+     through the same endpoint, so the two can never drift apart. -->
+<dialog id="camp-cog-box" class="cog">
+  <div class="row live-head">
+    <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-gear"/></svg></span>
+    <strong>Campaign settings</strong>
+    <div class="grow"></div>
+    <button id="camp-cog-close" class="tiny">
+      <svg class="ic" viewBox="0 0 24 24"><use href="#i-x"/></svg>Close</button>
+  </div>
+  <div id="camp-cog-body" class="cog-body"></div>
+  <div class="live-foot muted" id="camp-cog-foot">Saved as you change them.</div>
+</dialog>
+
+<!-- ── Campaign live ──────────────────────────────────────────────
+     One row per recipient, for the whole run: who, which draft, which picture,
+     and where that message has got to. The run itself owns the rows — it decides
+     the pairing before it sends anything — so this is that table polled, not a
+     guess reassembled on this side from a percentage. -->
+<dialog id="camp-live-box" class="live">
+  <div class="row live-head">
+    <span class="card-ic"><svg class="ic" viewBox="0 0 24 24"><use href="#i-megaphone"/></svg></span>
+    <strong>Campaign live</strong>
+    <span class="muted" id="camp-live-sub"></span>
+    <div class="grow"></div>
+    <div class="live-tally" id="camp-live-tally"></div>
+    <!-- Pause first, then choose. End is deliberately dead while the run is
+         going: ending a campaign is not undoable, and making it reachable only
+         from a stopped run means the decision is taken with the table holding
+         still rather than with rows landing under the cursor. -->
+    <button id="camp-pause" class="tiny" hidden>
+      <svg class="ic" viewBox="0 0 24 24"><use href="#i-pause"/></svg>
+      <span class="lbl">Pause</span></button>
+    <button id="camp-end" class="tiny danger" hidden disabled
+            title="Pause the campaign first">
+      <svg class="ic" viewBox="0 0 24 24"><use href="#i-stop"/></svg>End campaign</button>
+    <button id="camp-live-close" class="tiny">
+      <svg class="ic" viewBox="0 0 24 24"><use href="#i-x"/></svg>Close</button>
+  </div>
+  <!-- One tab per account the campaign is running from, each holding that
+       account's own recipients. Hidden with a single account: a tab strip of
+       one is a heading that looks like a choice. -->
+  <div class="live-tabs" id="camp-live-tabs" hidden></div>
+  <div class="live-wrap" id="camp-live-wrap">
+    <!-- The roster table's own look — same rows, same badges, same avatars, so
+         the live board and the pipeline's list are one language. -->
+    <table class="mem-table live-table" id="camp-live-table">
+      <thead><tr>
+        <th class="c-n">#</th><th>User</th><th>SMS</th><th>Media</th><th>Status</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="live-foot muted" id="camp-live-foot"></div>
+</dialog>
+
+<dialog id="minio-log">
+  <div class="row"><strong>MinIO log</strong><div class="grow"></div>
+    <button id="minio-close" class="tiny">close</button></div>
+  <pre id="minio-log-body"></pre>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+# Full meetup-bot stack: the app + its dependency (MinIO).
+#
+#   1.  cp .env.example .env   and fill in MINIO_USER / MINIO_PASSWORD,
+#       VNC_PASSWORD (+ Meetup creds)
+#   2.  docker compose up -d --build
+#   3.  app            http://<vm-ip>:4200
+#       watch browser  http://<vm-ip>:6081/vnc.html   (password: VNC_PASSWORD)
+#
+# Compose reads MINIO_USER / MINIO_PASSWORD from .env, so the same credentials
+# seed the MinIO server AND the app — set them in one place.
+#
+# Host ports are overridable in .env so this can share a VM with the sibling
+# bots (WhatsApp uses VNC 5900, Pinterest 5902/6082, insta MinIO 9000/9001).
+services:
+  app:
+    build: .
+    container_name: meetup-bot
+    init: true
+    shm_size: "1gb"          # Chromium crashes tabs on Docker's 64 MB default
+    ports:
+      - "${PORT:-4200}:4200"
+      - "${VNC_PORT:-5901}:5900"     # any VNC client
+      - "${NOVNC_PORT:-6081}:6080"   # in a web browser: /vnc.html
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4200
+      ENV: production
+      TZ: ${TZ:-UTC}
+      # Reach the sibling service by its compose DNS name, not localhost.
+      MINIO_URL: minio:9000
+      MINIO_USER: ${MINIO_USER:?set MINIO_USER in .env}
+      MINIO_PASSWORD: ${MINIO_PASSWORD:?set MINIO_PASSWORD in .env}
+      MINIO_BUCKET: ${MINIO_BUCKET:-meetup-members}
+      MINIO_BUCKET_SESSIONS: ${MINIO_BUCKET_SESSIONS:-meetup-sessions}
+      MINIO_BUCKET_MEDIA: ${MINIO_BUCKET_MEDIA:-meetup-media}
+      MINIO_BUCKET_MESSAGES: ${MINIO_BUCKET_MESSAGES:-meetup-messages}
+      # Headed Chromium on the container's virtual display, watchable over noVNC.
+      # For a fully headless run with nothing to watch: DISPLAY_MODE=headless
+      # and PLAYWRIGHT_HEADLESS=true.
+      DISPLAY_MODE: ${DISPLAY_MODE:-xvfb}
+      XVFB_SCREEN: ${XVFB_SCREEN:-1600x900x24}
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+      VNC_PORT: ${VNC_PORT:-5901}
+      NOVNC_PORT: ${NOVNC_PORT:-6081}
+      PLAYWRIGHT_HEADLESS: ${PLAYWRIGHT_HEADLESS:-false}
+      PLAYWRIGHT_CHANNEL: chromium
+      PLAYWRIGHT_NO_SANDBOX: "true"
+      PLAYWRIGHT_CLEAN_LAUNCH: "true"
+      PROXY_SERVER: ${PROXY_SERVER:-}
+      PROXY_USERNAME: ${PROXY_USERNAME:-}
+      PROXY_PASSWORD: ${PROXY_PASSWORD:-}
+      PROXY_BYPASS: ${PROXY_BYPASS:-localhost,127.0.0.1,minio}
+      MU_USERNAME: ${MU_USERNAME:-}
+      MU_PASSWORD: ${MU_PASSWORD:-}
+    volumes:
+      - app_data:/app/backend/data     # store.json, screenshots, chrome profiles
+    depends_on:
+      - minio
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    container_name: meetup-minio
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"       # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # web console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:?set MINIO_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?set MINIO_PASSWORD in .env}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+  app_data:

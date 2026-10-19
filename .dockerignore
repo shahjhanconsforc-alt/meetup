@@ -1,0 +1,28 @@
+# Secrets — never bake real credentials into an image
+.env
+.env.*
+!.env.example
+
+# VCS / tooling
+.git
+.gitignore
+.claude
+.agents
+
+# Python caches / local venvs
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Runtime artifacts (a volume provides backend/data at run time)
+backend/data/
+_minio_backup/
+*.tmp
+
+# Docs / scratch
+*.md
+.pytest_cache/
+profile/
+tests/

@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local runtime state: store.json, screenshots, the Chrome profiles that hold
+# live Meetup sessions. Never commit — these are credentials in all but name.
+backend/data/store.json
+backend/data/screenshots/
+backend/data/chrome-profile/
+backend/data/profiles/
+
+*.tmp
+
+# Local tooling / test caches
+.pytest_cache/
+.claude/
+profile/

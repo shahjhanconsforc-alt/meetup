@@ -1,0 +1,17 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-dotenv==1.0.1
+playwright==1.49.1
+pydantic==2.10.4
+# Object storage for the member/category tables (services/storage). urllib3 comes with it.
+minio==7.2.20
+# Reading .xlsx uploads (backend/uploads.py). Imported lazily, so a missing
+# openpyxl disables spreadsheets rather than breaking the upload path.
+openpyxl==3.1.5
+# Multipart form parsing — FastAPI needs this for UploadFile.
+python-multipart==0.0.20
+# OS-level mouse/keyboard for the address bar (Playwright can't reach browser
+# chrome). Windows-only — the markers make pip skip them on Linux/Docker, where
+# there's no desktop to drive; every other feature runs on Playwright headless.
+pywinauto==0.6.9; sys_platform == "win32"
+pyautogui==0.9.54; sys_platform == "win32"
