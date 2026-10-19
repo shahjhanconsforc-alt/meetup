@@ -1,23 +1,16 @@
 #!/bin/sh
-# Container entrypoint: gives the automation browser a screen on a headless VM.
+# Container entrypoint.
 #
-#   DISPLAY_MODE=xvfb (default)  Chromium runs HEADED on a virtual X display
-#                                (Xvfb). x11vnc shares that display, and noVNC
-#                                serves it as a web page, so the browser can be
-#                                watched (and used, e.g. to solve a captcha) from
-#                                any browser:  http://<vm-ip>:<NOVNC_PORT>/vnc.html
-#   DISPLAY_MODE=headless        no display at all; set PLAYWRIGHT_HEADLESS=true.
+#   DISPLAY_MODE=host (default)  the browser opens HEADED on the VM's own desktop.
+#                                The host's X socket (/tmp/.X11-unix) is mounted
+#                                in and DISPLAY points at it (e.g. :0).
+#   DISPLAY_MODE=headless        no display at all; the browser runs headless.
 #
 # Everything after the entrypoint (the image's CMD) is the app; it is exec'd
-# once the display is up.
+# once the display is reachable.
 set -eu
 
-DISPLAY_MODE="${DISPLAY_MODE:-xvfb}"
-XVFB_DISPLAY="${XVFB_DISPLAY:-:99}"
-XVFB_SCREEN="${XVFB_SCREEN:-1600x900x24}"
-VNC_ENABLED="${VNC_ENABLED:-true}"
-VNC_PASSWORD="${VNC_PASSWORD:-}"
-NOVNC_ENABLED="${NOVNC_ENABLED:-true}"
+DISPLAY_MODE="${DISPLAY_MODE:-host}"
 
 # A Chrome profile remembers the host that last opened it in Singleton* files.
 # A new container is a new hostname, so Chrome would refuse the profile as "in
@@ -27,49 +20,26 @@ for dir in ${CHROME_PROFILE_DIRS:-}; do
 done
 
 if [ "$DISPLAY_MODE" = "headless" ]; then
-    echo "Display mode: headless (no virtual display, nothing to watch)."
+    echo "Display mode: headless (no window)."
+    unset DISPLAY
     exec "$@"
 fi
 
-echo "Display mode: xvfb ($XVFB_DISPLAY, $XVFB_SCREEN)."
-rm -f "/tmp/.X${XVFB_DISPLAY#:}-lock"
-Xvfb "$XVFB_DISPLAY" -screen 0 "$XVFB_SCREEN" -nolisten tcp -ac >/tmp/xvfb.log 2>&1 &
-export DISPLAY="$XVFB_DISPLAY"
-
-SOCKET="/tmp/.X11-unix/X${XVFB_DISPLAY#:}"
-i=0
-while [ ! -S "$SOCKET" ] && [ "$i" -lt 100 ]; do
-    i=$((i + 1)); sleep 0.1
-done
-if [ ! -S "$SOCKET" ]; then
-    echo "Xvfb did not start:" >&2
-    cat /tmp/xvfb.log >&2 || true
+if [ -z "${DISPLAY:-}" ]; then
+    echo "DISPLAY_MODE=host needs DISPLAY (e.g. :0) - set DISPLAY in .env, or use DISPLAY_MODE=headless." >&2
     exit 1
 fi
 
-# A window manager, so --start-maximized fills the screen and windows can be
-# moved/raised from the viewer. Without one every window sits at 0,0 unframed.
-openbox >/tmp/openbox.log 2>&1 &
+# Wait for the desktop's X socket: after a reboot the container can start
+# before anyone has logged in to the desktop.
+DISPLAY_NUM="${DISPLAY#*:}"; DISPLAY_NUM="${DISPLAY_NUM%%.*}"     # ":0.0" -> "0"
+SOCKET="/tmp/.X11-unix/X${DISPLAY_NUM}"
+i=0
+while [ ! -S "$SOCKET" ] && [ "$i" -lt 600 ]; do
+    [ "$i" -eq 0 ] && echo "Waiting for the desktop's X display ($SOCKET) - log in to the VM desktop ..."
+    i=$((i + 1)); sleep 1
+done
+[ -S "$SOCKET" ] || echo "WARNING: $SOCKET not found; the browser window will fail to open." >&2
 
-if [ "$VNC_ENABLED" = "true" ]; then
-    if [ -n "$VNC_PASSWORD" ]; then
-        mkdir -p "$HOME/.vnc"
-        x11vnc -storepasswd "$VNC_PASSWORD" "$HOME/.vnc/passwd" >/dev/null 2>&1
-        VNC_AUTH="-rfbauth $HOME/.vnc/passwd"
-    else
-        VNC_AUTH="-nopw"
-        echo "WARNING: VNC has no password - set VNC_PASSWORD in .env before exposing the viewer ports." >&2
-    fi
-    # -forever: keep serving after a viewer leaves; -shared: several viewers at once.
-    # shellcheck disable=SC2086
-    x11vnc -display "$DISPLAY" -forever -shared -rfbport 5900 $VNC_AUTH \
-        -noxdamage -bg -o /tmp/x11vnc.log >/dev/null 2>&1 \
-        || echo "WARNING: x11vnc failed to start (see /tmp/x11vnc.log)." >&2
-
-    if [ "$NOVNC_ENABLED" = "true" ]; then
-        websockify --web /usr/share/novnc 6080 localhost:5900 >/tmp/novnc.log 2>&1 &
-        echo "Browser view: http://<vm-ip>:${NOVNC_PORT:-6080}/vnc.html   (VNC client: <vm-ip>:${VNC_PORT:-5900})"
-    fi
-fi
-
+echo "Display mode: host (DISPLAY=$DISPLAY). The browser opens on the VM desktop."
 exec "$@"

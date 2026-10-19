@@ -1,8 +1,8 @@
 # Deploying meetup-bot
 
 Two supported shapes: **local on Windows** (a real desktop, a visible browser —
-what most of this was built against) and **Docker on a VM** (no monitor needed:
-Chromium runs headed on a virtual display that you watch from your browser).
+what most of this was built against) and **Docker on an Ubuntu Desktop VM** (Chromium opens
+headed on the VM's own desktop — or runs headless).
 
 They are genuinely different: the desktop-cursor features in
 `backend/automation/cursor.py` need a Windows desktop to drive and are no-ops in
@@ -47,39 +47,48 @@ have.
 
 ---
 
-## Docker (VM — headless server, browser still watchable)
+## Docker on an Ubuntu Desktop VM (headed on the VM desktop, or headless)
 
 ```bash
-# on the VM (Ubuntu/Debian with Docker + the compose plugin installed)
+# on the VM (Ubuntu Desktop with Docker + the compose plugin installed)
 git clone https://github.com/shahjhanconsforc-alt/meetup.git && cd meetup
-cp .env.example .env         # MINIO_USER, MINIO_PASSWORD and VNC_PASSWORD
+cp .env.example .env         # MINIO_USER and MINIO_PASSWORD (+ Meetup creds)
 docker compose up -d --build
 ```
 
-The VM needs no desktop. Inside the container `docker/entrypoint.sh` starts a
-virtual screen (Xvfb) with a window manager, Chromium runs **headed** on it, and
-x11vnc + noVNC share that screen:
+**Headed (default).** The container has no screen of its own: the VM desktop's
+X socket (`/tmp/.X11-unix`) is mounted in and `DISPLAY` (default `:0`) points
+at it, so every Chromium window the bot opens appears on the VM's desktop. The
+container runs as root, so the desktop must let root draw on it — run this
+once per desktop login, in a terminal on the VM desktop:
 
-| service | port (host) | what |
+```bash
+xhost +SI:localuser:root
+```
+
+To make that permanent, add it as a GNOME *Startup Application*
+(command: `xhost +SI:localuser:root`). If the desktop's display is not `:0`
+(`echo $DISPLAY` in a desktop terminal), set `DISPLAY=` in `.env`. After a
+reboot the container waits for the desktop's X display to appear (log in to
+the desktop) before starting the app.
+
+**Headless.** No desktop, or nothing to watch: set in `.env`
+
+```
+DISPLAY_MODE=headless
+PLAYWRIGHT_HEADLESS=true
+```
+
+| service | port | what |
 |---|---|---|
 | app | 4200 | the UI and API |
-| app | **6081** | **watch the automation browser**: `http://<vm-ip>:6081/vnc.html` |
-| app | 5901 | the same screen for a VNC client (RealVNC, TigerVNC, …) |
 | minio | 9000 | S3 API |
 | minio | 9001 | web console |
 
-You can click and type in the noVNC view too — that is how a captcha or email
-code gets solved on the server. Host ports are overridable in `.env`
-(`PORT`, `VNC_PORT`, `NOVNC_PORT`, `MINIO_API_PORT`, `MINIO_CONSOLE_PORT`) so
-it can share a VM with the sibling bots.
-
-**Security:** set `VNC_PASSWORD` — without it anyone who reaches 5901/6081 can
-drive the logged-in browser. Better still, keep those ports closed in the VM's
-firewall and tunnel: `ssh -L 6081:localhost:6081 user@vm`, then open
-`http://localhost:6081/vnc.html`.
-
-Fully headless instead (nothing to watch, a little less RAM): set
-`DISPLAY_MODE=headless` and `PLAYWRIGHT_HEADLESS=true` in `.env`.
+Host ports are overridable in `.env` (`PORT`, `MINIO_API_PORT`,
+`MINIO_CONSOLE_PORT`). To use an existing shared MinIO instead of the bundled
+one, add a `docker-compose.override.yml` that sets the app's `MINIO_URL` and
+`depends_on: !reset []`, and puts `minio` under a profile.
 
 Compose reads `MINIO_USER` / `MINIO_PASSWORD` from `.env` and uses them for
 **both** the MinIO server and the app, so they are set in one place. Both are
@@ -95,6 +104,19 @@ The base image is pinned to the same Playwright version as `requirements.txt`
 **Change both together or neither.**
 
 Logs: `docker compose logs -f app`.
+
+### Without Docker on the Ubuntu desktop
+
+```bash
+# as the normal desktop user — NOT root (Chrome refuses to run as root)
+sudo apt install -y python3-venv
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+python -m playwright install chromium
+sudo .venv/bin/python -m playwright install-deps chromium
+cp .env.example .env      # PLAYWRIGHT_CHANNEL=chromium, HOST=0.0.0.0
+python -m backend.main    # from a terminal on the desktop, so DISPLAY is set
+```
 
 ### The one volume that matters
 
@@ -128,12 +150,12 @@ also works when run as a standalone script.
 | `HOST` / `PORT` | `127.0.0.1` / `4200` | 4000 and 4100 belong to the sibling bots |
 | `ENV` | `development` | shown on `/api/status` |
 | `MU_USERNAME` / `MU_PASSWORD` | — | the default profile's login |
-| `PLAYWRIGHT_HEADLESS` | `false` | `false` in Docker too (virtual display) |
+| `PLAYWRIGHT_HEADLESS` | `false` | `true` for a headless run |
 | `PLAYWRIGHT_CHANNEL` | `chrome` | `chromium` in Docker |
 | `PLAYWRIGHT_CLEAN_LAUNCH` | `true` | strips the automation infobar + `navigator.webdriver` |
 | `PLAYWRIGHT_NO_SANDBOX` | `false` | `true` in Docker (Chromium runs as root) |
-| `VNC_PASSWORD` | — | password for the VNC / noVNC browser view |
-| `DISPLAY_MODE` | `xvfb` | Docker only: `headless` = no virtual display |
+| `DISPLAY_MODE` | `host` | Docker only: `host` = VM desktop, `headless` = no window |
+| `DISPLAY` | `:0` | Docker only: the VM desktop's X display |
 | `PROXY_SERVER` | — | one proxy, applied at launch, **never rotated** |
 | `MINIO_URL` | `localhost:9000` | `minio:9000` inside compose |
 | `MINIO_BUCKET*` | `meetup-*` | S3 names can't contain underscores |
